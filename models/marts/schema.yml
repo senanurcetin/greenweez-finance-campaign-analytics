@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: int_sales_margin
+    description: "Joined sales, product and shipping data with margin calculations"
+    columns:
+      - name: orders_id
+        tests:
+          - not_null
+
+      - name: product_id
+        tests:
+          - not_null

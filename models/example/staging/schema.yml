@@ -1,0 +1,40 @@
+version: 2
+
+sources:
+  - name: raw
+    database: workintech-working
+    schema: gwz_raw_data
+    tables:
+      - name: sales
+        identifier: raw_gz_sales
+      - name: product
+        identifier: raw_gz_product
+      - name: ship
+        identifier: raw_gz_ship
+
+models:
+  - name: stg_raw__sales
+    description: "Cleaned sales data from raw source"
+    columns:
+      - name: orders_id
+        tests:
+          - not_null
+      - name: product_id
+        tests:
+          - not_null
+
+  - name: stg_raw__product
+    description: "Cleaned product data from raw source"
+    columns:
+      - name: product_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_raw__ship
+    description: "Cleaned shipping data from raw source"
+    columns:
+      - name: orders_id
+        tests:
+          - unique
+          - not_null
