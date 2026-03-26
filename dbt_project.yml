@@ -18,7 +18,7 @@ clean-targets:
 
 models:
   dbt_workintech:
-    example:
+    staging:
       +materialized: view
     marts:
       +materialized: table
