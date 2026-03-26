@@ -1,0 +1,72 @@
+version: 2
+
+models:
+  - name: int_sales_margin
+    description: "Product-level margin calculation combining sales and product data."
+    columns:
+      - name: orders_id
+        description: "Order identifier."
+        tests:
+          - not_null
+
+      - name: products_id
+        description: "Product identifier."
+        tests:
+          - not_null
+
+      - name: date_date
+        description: "Transaction date."
+
+      - name: revenue
+        description: "Revenue generated per product line."
+
+      - name: quantity
+        description: "Quantity sold per product."
+
+      - name: purchase_price
+        description: "Purchase price of the product."
+
+      - name: purchase_cost
+        description: "Total purchase cost (quantity * purchase_price)."
+
+      - name: margin
+        description: "Margin calculated as revenue minus purchase cost."
+
+  - name: int_orders_margin
+    description: "Order-level margin aggregated from product-level margins."
+    columns:
+      - name: orders_id
+        description: "Order identifier."
+        tests:
+          - not_null
+          - unique
+
+      - name: date_date
+        description: "Order date."
+
+      - name: revenue
+        description: "Total revenue per order."
+
+      - name: quantity
+        description: "Total quantity per order."
+
+      - name: purchase_cost
+        description: "Total purchase cost per order."
+
+      - name: margin
+        description: "Total margin per order."
+
+  - name: int_orders_operational
+    description: "Order-level operational margin including shipping and logistics costs."
+    columns:
+      - name: orders_id
+        description: "Order identifier."
+        tests:
+          - not_null
+          - unique
+
+      - name: date_date
+        description: "Order date."
+
+      - name: operational_margin
+        description: "Operational margin calculated as margin + shipping_fee - log_cost - ship_cost."

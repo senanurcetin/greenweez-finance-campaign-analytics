@@ -20,5 +20,7 @@ models:
   dbt_workintech:
     staging:
       +materialized: view
-    marts:
+    intermediate:
+      +materialized: view
+    mart:
       +materialized: table
