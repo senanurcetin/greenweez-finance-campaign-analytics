@@ -9,6 +9,10 @@ sources:
       - name: sales
         identifier: raw_gz_sales
         description: "Raw sales transactions data."
+        config:
+          loaded_at_field:  "timestamp(date_date)"
+          freshness:
+            warn_after: {count: 90, period: day}
         columns:
           - name: date_date
             description: "Transaction date."
@@ -48,6 +52,9 @@ sources:
 models:
   - name: stg_raw__sales
     description: "Cleaned sales data from raw source."
+    tests:
+      - unique:
+          column_name: "concat(cast(orders_id as string), '-', cast(products_id as string))"
     columns:
       - name: date_date
         description: "Transaction date."
