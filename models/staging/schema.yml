@@ -10,7 +10,7 @@ sources:
         identifier: raw_gz_sales
         description: "Raw sales transactions data."
         config:
-          loaded_at_field:  "timestamp(date_date)"
+          loaded_at_field: "timestamp(date_date)"
           freshness:
             warn_after: {count: 90, period: day}
         columns:
@@ -48,6 +48,82 @@ sources:
             description: "Logistics cost."
           - name: ship_cost
             description: "Shipping cost."
+
+      - name: adwords
+        identifier: raw_gz_adwords
+        description: "Raw Google Adwords campaign performance data."
+        columns:
+          - name: date_date
+            description: "Campaign performance date."
+          - name: paid_source
+            description: "Paid media source."
+          - name: campaign_key
+            description: "Campaign identifier."
+          - name: camPGN_name
+            description: "Raw campaign name field."
+          - name: ads_cost
+            description: "Advertising cost stored in raw format."
+          - name: impression
+            description: "Number of ad impressions."
+          - name: click
+            description: "Number of ad clicks."
+
+      - name: bing
+        identifier: raw_gz_bing
+        description: "Raw Bing campaign performance data."
+        columns:
+          - name: date_date
+            description: "Campaign performance date."
+          - name: paid_source
+            description: "Paid media source."
+          - name: campaign_key
+            description: "Campaign identifier."
+          - name: camPGN_name
+            description: "Raw campaign name field."
+          - name: ads_cost
+            description: "Advertising cost stored in raw format."
+          - name: impression
+            description: "Number of ad impressions."
+          - name: click
+            description: "Number of ad clicks."
+
+      - name: criteo
+        identifier: raw_gz_criteo
+        description: "Raw Criteo campaign performance data."
+        columns:
+          - name: date_date
+            description: "Campaign performance date."
+          - name: paid_source
+            description: "Paid media source."
+          - name: campaign_key
+            description: "Campaign identifier."
+          - name: camPGN_name
+            description: "Raw campaign name field."
+          - name: ads_cost
+            description: "Advertising cost stored in raw format."
+          - name: impression
+            description: "Number of ad impressions."
+          - name: click
+            description: "Number of ad clicks."
+
+      - name: facebook
+        identifier: raw_gz_facebook
+        description: "Raw Facebook campaign performance data."
+        columns:
+          - name: date_date
+            description: "Campaign performance date."
+          - name: paid_source
+            description: "Paid media source."
+          - name: campaign_key
+            description: "Campaign identifier."
+          - name: camPGN_name
+            description: "Raw campaign name field."
+          - name: ads_cost
+            description: "Advertising cost stored in raw format."
+          - name: impression
+            description: "Number of ad impressions."
+          - name: click
+            description: "Number of ad clicks."
 
 models:
   - name: stg_raw__sales
@@ -96,3 +172,111 @@ models:
         description: "Logistics cost."
       - name: ship_cost
         description: "Shipping cost."
+
+  - name: stg_raw__adwords
+    description: "Cleaned Adwords campaign data with standardized column names and types."
+    tests:
+      - unique:
+          column_name: "concat(cast(date_date as string), '-', paid_source, '-', cast(campaign_key as string))"
+    columns:
+      - name: date_date
+        description: "Campaign performance date."
+        tests:
+          - not_null
+      - name: paid_source
+        description: "Advertising source name."
+        tests:
+          - not_null
+      - name: campaign_key
+        description: "Campaign identifier."
+        tests:
+          - not_null
+      - name: campaign_name
+        description: "Renamed campaign name from camPGN_name."
+      - name: ads_cost
+        description: "Advertising cost cast to float64."
+      - name: impression
+        description: "Number of impressions."
+      - name: click
+        description: "Number of clicks."
+
+  - name: stg_raw__bing
+    description: "Cleaned Bing campaign data with standardized column names and types."
+    tests:
+      - unique:
+          column_name: "concat(cast(date_date as string), '-', paid_source, '-', cast(campaign_key as string))"
+    columns:
+      - name: date_date
+        description: "Campaign performance date."
+        tests:
+          - not_null
+      - name: paid_source
+        description: "Advertising source name."
+        tests:
+          - not_null
+      - name: campaign_key
+        description: "Campaign identifier."
+        tests:
+          - not_null
+      - name: campaign_name
+        description: "Renamed campaign name from camPGN_name."
+      - name: ads_cost
+        description: "Advertising cost cast to float64."
+      - name: impression
+        description: "Number of impressions."
+      - name: click
+        description: "Number of clicks."
+
+  - name: stg_raw__criteo
+    description: "Cleaned Criteo campaign data with standardized column names and types."
+    tests:
+      - unique:
+          column_name: "concat(cast(date_date as string), '-', paid_source, '-', cast(campaign_key as string))"
+    columns:
+      - name: date_date
+        description: "Campaign performance date."
+        tests:
+          - not_null
+      - name: paid_source
+        description: "Advertising source name."
+        tests:
+          - not_null
+      - name: campaign_key
+        description: "Campaign identifier."
+        tests:
+          - not_null
+      - name: campaign_name
+        description: "Renamed campaign name from camPGN_name."
+      - name: ads_cost
+        description: "Advertising cost cast to float64."
+      - name: impression
+        description: "Number of impressions."
+      - name: click
+        description: "Number of clicks."
+
+  - name: stg_raw__facebook
+    description: "Cleaned Facebook campaign data with standardized column names and types."
+    tests:
+      - unique:
+          column_name: "concat(cast(date_date as string), '-', paid_source, '-', cast(campaign_key as string))"
+    columns:
+      - name: date_date
+        description: "Campaign performance date."
+        tests:
+          - not_null
+      - name: paid_source
+        description: "Advertising source name."
+        tests:
+          - not_null
+      - name: campaign_key
+        description: "Campaign identifier."
+        tests:
+          - not_null
+      - name: campaign_name
+        description: "Renamed campaign name from camPGN_name."
+      - name: ads_cost
+        description: "Advertising cost cast to float64."
+      - name: impression
+        description: "Number of impressions."
+      - name: click
+        description: "Number of clicks."
