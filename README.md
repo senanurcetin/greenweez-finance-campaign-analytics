@@ -6,6 +6,8 @@ The pipeline starts with raw transactional and campaign data stored in BigQuery,
 
 As a result, the system now enables a unified view of revenue, costs, operational margin, and advertising performance.
 
+<img width="2034" height="378" alt="dbt dag" src="https://github.com/user-attachments/assets/2d8ef5a8-44dd-4c0a-a7c6-dea770697995" />
+
 ## Project Purpose
 
 The goal of this project is to build a modular and production-oriented data pipeline that supports both **financial reporting** and **marketing performance analysis**.
@@ -132,10 +134,14 @@ Daily finance + campaign data:
 * ads_clicks
 * ads_margin
 * revenue & margin metrics
+*   
+<img width="2150" height="904" alt="finance_view" src="https://github.com/user-attachments/assets/9c79ca45-c009-412e-80ab-23aef1de7d50" />
 
 ### finance_campaigns_month
 
 Monthly aggregated reporting model for trend analysis.
+
+<img width="1590" height="273" alt="bigquery" src="https://github.com/user-attachments/assets/0f6936f8-8e77-4314-a829-73f41d9b2748" />
 
 ## Data Quality
 
@@ -206,11 +212,3 @@ It started with a finance reporting system and was extended with campaign data i
 
 The final result is a clean, modular, and production-ready data model that connects finance and marketing data for better decision-making.
 
-## Suggested Screenshots
-
-You can improve this project by adding:
-
-* dbt lineage graph
-* BigQuery table previews
-* dbt Cloud run success screen
-* finance model outputs
