@@ -87,8 +87,8 @@ sources:
           - name: click
             description: "Number of ad clicks."
 
-      - name: criteo
-        identifier: raw_gz_criteo
+      - name: criterio
+        identifier: raw_gz_criterio
         description: "Raw Criteo campaign performance data."
         columns:
           - name: date_date
@@ -173,7 +173,7 @@ models:
       - name: ship_cost
         description: "Shipping cost."
 
-  - name: stg_raw__adwords
+  - name: stg_raw_adwords
     description: "Cleaned Adwords campaign data with standardized column names and types."
     tests:
       - unique:
@@ -200,7 +200,7 @@ models:
       - name: click
         description: "Number of clicks."
 
-  - name: stg_raw__bing
+  - name: stg_raw_bing
     description: "Cleaned Bing campaign data with standardized column names and types."
     tests:
       - unique:
@@ -227,7 +227,7 @@ models:
       - name: click
         description: "Number of clicks."
 
-  - name: stg_raw__criteo
+  - name: stg_raw_criterio
     description: "Cleaned Criteo campaign data with standardized column names and types."
     tests:
       - unique:
@@ -254,7 +254,7 @@ models:
       - name: click
         description: "Number of clicks."
 
-  - name: stg_raw__facebook
+  - name: stg_raw_facebook
     description: "Cleaned Facebook campaign data with standardized column names and types."
     tests:
       - unique:

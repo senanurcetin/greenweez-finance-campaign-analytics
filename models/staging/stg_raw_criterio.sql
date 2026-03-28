@@ -6,4 +6,4 @@ select
     cast(ads_cost as float64) as ads_cost,
     impression,
     click
-from {{ source('raw', 'criteo') }}
+from {{ source('raw', 'criterio') }}

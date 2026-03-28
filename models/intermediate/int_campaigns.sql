@@ -6,7 +6,7 @@ select
     ads_cost,
     impression,
     click
-from {{ ref('stg_raw__adwords') }}
+from {{ ref('stg_raw_adwords') }}
 
 union all
 
@@ -18,7 +18,7 @@ select
     ads_cost,
     impression,
     click
-from {{ ref('stg_raw__bing') }}
+from {{ ref('stg_raw_bing') }}
 
 union all
 
@@ -30,7 +30,7 @@ select
     ads_cost,
     impression,
     click
-from {{ ref('stg_raw__criteo') }}
+from {{ ref('stg_raw_criterio') }}
 
 union all
 
@@ -42,4 +42,4 @@ select
     ads_cost,
     impression,
     click
-from {{ ref('stg_raw__facebook') }}
+from {{ ref('stg_raw_facebook') }}

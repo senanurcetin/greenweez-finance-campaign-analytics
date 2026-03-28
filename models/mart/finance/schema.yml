@@ -9,38 +9,29 @@ models:
         tests:
           - not_null
           - unique
-
       - name: total_transactions
         description: "Total number of orders per day."
-
       - name: total_revenue
         description: "Total revenue generated per day."
-
       - name: avg_basket
         description: "Average basket value per day (total revenue divided by number of orders)."
-
       - name: operational_margin
         description: "Total operational margin per day."
-
       - name: total_purchase_cost
         description: "Total purchase cost per day."
-
       - name: total_shipping_fee
         description: "Total shipping fees paid by customers per day."
-
       - name: total_log_cost
         description: "Total logistics costs per day."
-
       - name: total_quantity
         description: "Total quantity of products sold per day."
-
       - name: total_ship_cost
         description: "Total shipping cost per day."
 
   - name: finance_campaigns_day
     description: "Daily finance mart enriched with paid campaign performance and advertising margin."
     columns:
-      - name: date_date
+      - name: date
         description: "Reporting date."
         tests:
           - not_null

@@ -1,45 +1,8 @@
 select
     date_date,
-    paid_source,
-    campaign_key,
-    campaign_name,
-    ads_cost,
-    impression,
-    click
-from {{ ref('stg_raw_adwords') }}
-
-union all
-
-select
-    date_date,
-    paid_source,
-    campaign_key,
-    campaign_name,
-    ads_cost,
-    impression,
-    click
-from {{ ref('stg_raw_bing') }}
-
-union all
-
-select
-    date_date,
-    paid_source,
-    campaign_key,
-    campaign_name,
-    ads_cost,
-    impression,
-    click
-from {{ ref('stg_raw_criterio') }}
-
-union all
-
-select
-    date_date,
-    paid_source,
-    campaign_key,
-    campaign_name,
-    ads_cost,
-    impression,
-    click
-from {{ ref('stg_raw_facebook') }}
+    sum(ads_cost) as ads_cost,
+    sum(impression) as ads_impression,
+    sum(click) as ads_clicks
+from {{ ref('int_campaigns') }}
+group by date_date
+order by date_date desc
