@@ -19,6 +19,8 @@ models:
         description: "Total operational margin per day."
       - name: total_purchase_cost
         description: "Total purchase cost per day."
+      - name: total_margin
+        description: "Product margin per day (revenue - purchase cost), before shipping, logistics and ads."
       - name: total_shipping_fee
         description: "Total shipping fees paid by customers per day."
       - name: total_log_cost
@@ -29,7 +31,10 @@ models:
         description: "Total shipping cost per day."
 
   - name: finance_campaigns_day
-    description: "Daily finance mart enriched with paid campaign performance and advertising margin."
+    description: >
+      Daily finance mart enriched with paid campaign performance and advertising margin.
+      Full outer join of finance and ad data, so days with ad spend but no orders are kept.
+      Materialized as a view (cheap derived layer; the table-materialized `finance_days` holds the heavy aggregation).
     columns:
       - name: date
         description: "Reporting date."
@@ -38,16 +43,26 @@ models:
           - unique
       - name: ads_margin
         description: "Advertising-adjusted margin calculated as operational_margin minus ads_cost."
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "= round(operational_margin - ads_cost, 2)"
       - name: average_basket
-        description: "Average basket value per day."
+        description: "Average basket value per day (revenue / transactions; NULL on days without orders)."
       - name: operational_margin
         description: "Operational margin before advertising cost."
       - name: ads_cost
         description: "Advertising cost per day."
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
       - name: ads_impression
         description: "Advertising impressions per day."
       - name: ads_clicks
         description: "Advertising clicks per day."
+      - name: transactions
+        description: "Number of orders per day."
       - name: quantity
         description: "Quantity sold per day."
       - name: revenue
@@ -55,7 +70,7 @@ models:
       - name: purchase_cost
         description: "Purchase cost per day."
       - name: margin
-        description: "Margin per day before operational costs."
+        description: "Product margin per day (revenue - purchase cost) before operational costs."
       - name: shipping_fee
         description: "Shipping fee per day."
       - name: log_cost
@@ -74,7 +89,7 @@ models:
       - name: ads_margin
         description: "Advertising-adjusted margin aggregated by month."
       - name: average_basket
-        description: "Average basket value aggregated by month."
+        description: "Weighted average basket for the month (total revenue / total transactions)."
       - name: operational_margin
         description: "Operational margin aggregated by month."
       - name: ads_cost
@@ -83,6 +98,8 @@ models:
         description: "Advertising impressions aggregated by month."
       - name: ads_clicks
         description: "Advertising clicks aggregated by month."
+      - name: transactions
+        description: "Number of orders aggregated by month."
       - name: quantity
         description: "Quantity sold aggregated by month."
       - name: revenue
