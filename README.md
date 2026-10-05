@@ -27,7 +27,7 @@ flowchart LR
 |---|---|---|
 | staging | `stg_raw__sales`, `__product`, `__ship`, `__adwords`, `__bing`, `__criteo`, `__facebook` | view |
 | intermediate | `int_sales_margin`, `int_orders_margin`, `int_orders_operational`, `int_campaigns`, `int_campaigns_day` | view |
-| mart (`finance` dataset) | `finance_days`, `finance_campaigns_day` (view), `finance_campaigns_month` | table |
+| mart (`<dataset>_finance`) | `finance_days`, `finance_campaigns_day` (view), `finance_campaigns_month` | table |
 
 Key metric definitions:
 
@@ -53,9 +53,11 @@ Note: dbt sources do not create DAG edges to seeds, so load them first (`dbt see
 
 1. Copy `.github/dbt-profiles/profiles.bigquery.example.yml` to `~/.dbt/profiles.yml` and set your project/dataset.
 2. `dbt deps && dbt build`. Seeds are disabled on the BigQuery target; sources resolve to `workintech-working.gwz_raw_data.raw_gz_*`.
-3. Marts are written to a dataset literally named `finance` (see `macros/generate_schema_name.sql`).
+3. With dbt's default schema naming, staging/intermediate land in `<dataset>` and the marts in `<dataset>_finance` (e.g. `dbt_scetin` and `dbt_scetin_finance`).
 
-The BigQuery target parses without credentials, but CI does not execute it (that needs a service account).
+The BigQuery target parses without credentials, but CI does not execute it (that needs a service account). The SQL was also built and tested on BigQuery (EU) with the synthetic seeds loaded into a scratch dataset.
+
+> The `gwz_raw_data.raw_gz_*` source tables must exist before a real BigQuery run; at the time of writing the dataset is empty.
 
 ## Quality checks (CI)
 
@@ -66,7 +68,7 @@ The BigQuery target parses without credentials, but CI does not execute it (that
 ```
 models/{staging,intermediate,mart/finance}   dbt models + schema.yml docs/tests
 models/exposures.yml                         dashboard exposure
-macros/                                      stg_ads_source, month_start, generate_schema_name
+macros/                                      stg_ads_source, month_start
 seeds/                                       synthetic raw_gz_* CSVs (DuckDB targets only)
 tests/                                       singular reconciliation tests
 demo/app.py                                  Streamlit dashboard (reads target/demo.duckdb)
@@ -78,7 +80,7 @@ scripts/generate_seed_data.py                seed generator
 - The demo data is synthetic; its numbers say nothing about the real Greenweez business.
 - Campaign performance is reporting logic, not production marketing attribution.
 - The dashboard is a demo, not a BI product.
-- BigQuery execution is not part of CI.
+- BigQuery execution is not part of CI, and the real `raw_gz_*` source tables are not loaded in the warehouse yet.
 
 ## License
 

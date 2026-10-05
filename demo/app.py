@@ -39,8 +39,8 @@ if not DB_PATH.exists():
     st.error(f"{DB_PATH} not found. Run `make build` first (dbt seed + build on the demo target).")
     st.stop()
 
-daily = query("select * from finance.finance_campaigns_day order by date")
-monthly = query("select * from finance.finance_campaigns_month order by datemonth")
+daily = query("select * from analytics_finance.finance_campaigns_day order by date")
+monthly = query("select * from analytics_finance.finance_campaigns_month order by datemonth")
 spend = query(
     """
     select date_trunc('month', date_date)::date as datemonth, paid_source, sum(ads_cost) as ads_cost

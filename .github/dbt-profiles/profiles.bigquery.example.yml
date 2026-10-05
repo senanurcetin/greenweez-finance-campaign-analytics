@@ -8,6 +8,6 @@ default:
       type: bigquery
       method: oauth            # or service-account with keyfile
       project: workintech-working
-      dataset: dbt_dev         # staging/intermediate land here; marts land in the `finance` dataset
+      dataset: dbt_dev         # staging/intermediate land here; marts land in `<dataset>_finance`
       location: EU
       threads: 4
