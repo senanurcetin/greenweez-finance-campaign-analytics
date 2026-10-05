@@ -10,6 +10,7 @@ with totals as (
 
 select *
 from totals
-where abs(staging_revenue - finance_days_revenue) > 0.5
+where
+    abs(staging_revenue - finance_days_revenue) > 0.5
     or abs(staging_revenue - campaigns_day_revenue) > 0.5
     or abs(staging_revenue - campaigns_month_revenue) > 0.5

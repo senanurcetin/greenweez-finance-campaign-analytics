@@ -1,0 +1,15 @@
+version: 2
+
+exposures:
+  - name: finance_campaigns_dashboard
+    label: Finance and campaign profitability dashboard
+    type: dashboard
+    maturity: low
+    description: >
+      Streamlit demo (demo/app.py) reading the finance marts from the DuckDB demo build.
+    owner:
+      name: Senanur Cetin
+    depends_on:
+      - ref('finance_campaigns_day')
+      - ref('finance_campaigns_month')
+      - ref('int_campaigns')
