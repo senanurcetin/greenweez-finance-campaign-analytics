@@ -13,3 +13,5 @@ exposures:
       - ref('finance_campaigns_day')
       - ref('finance_campaigns_month')
       - ref('int_campaigns')
+      - ref('marketing_performance_month')
+      - ref('marketing_source_month')

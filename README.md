@@ -19,8 +19,9 @@ flowchart LR
     sales & product --> int_sales_margin --> int_orders_margin --> int_orders_operational
     ship --> int_orders_operational --> finance_days --> finance_campaigns_day
     adwords & bing & criteo & facebook --> int_campaigns --> int_campaigns_day --> finance_campaigns_day
-    finance_campaigns_day --> finance_campaigns_month
-    finance_campaigns_day & finance_campaigns_month --> dashboard["Streamlit demo"]
+    finance_campaigns_day --> finance_campaigns_month --> marketing_performance_month
+    int_campaigns --> marketing_source_month
+    finance_campaigns_day & finance_campaigns_month & marketing_performance_month & marketing_source_month --> dashboard["Streamlit demo"]
 ```
 
 | Layer | Models | Materialization |
@@ -28,12 +29,15 @@ flowchart LR
 | staging | `stg_raw__sales`, `__product`, `__ship`, `__adwords`, `__bing`, `__criteo`, `__facebook` | view |
 | intermediate | `int_sales_margin`, `int_orders_margin`, `int_orders_operational`, `int_campaigns`, `int_campaigns_day` | view |
 | mart (`<dataset>_finance`) | `finance_days`, `finance_campaigns_day` (view), `finance_campaigns_month` | table |
+| mart (`<dataset>_marketing`) | `marketing_performance_month`, `marketing_source_month` | table |
 
 Key metric definitions:
 
 - `operational_margin = margin + shipping_fee - log_cost - ship_cost`. Missing shipping records count as 0 (flagged by `has_ship_record`), so an order never drops out of the totals.
 - `ads_margin = operational_margin - ads_cost`. Days with ad spend but no orders are kept and show a negative margin.
 - Monthly `average_basket` is weighted (`sum(revenue) / sum(transactions)`), not an average of daily averages.
+- Marketing efficiency (`marketing_performance_month`, `marketing_source_month`): `roas = revenue / ads_cost`, `margin_roas = operational_margin / ads_cost`, `cpc = ads_cost / clicks`, `ctr = clicks / impressions` (a 0-1 ratio). All are ratios of sums, and a zero denominator gives NULL.
+- ROAS exists only at the **blended** level (all sources together). Revenue is not attributed to a source or campaign in the data, so per-source ROAS is deliberately not computed; per-source models carry CPC, CTR and spend share only.
 
 ## Quick start (DuckDB demo, no cloud account needed)
 
@@ -67,6 +71,7 @@ The BigQuery target parses without credentials, but CI does not execute it (that
 
 ```
 models/{staging,intermediate,mart/finance}   dbt models + schema.yml docs/tests
+models/mart/marketing/                       ROAS / CPC / CTR marts
 models/exposures.yml                         dashboard exposure
 macros/                                      stg_ads_source, month_start
 seeds/                                       synthetic raw_gz_* CSVs (DuckDB targets only)
