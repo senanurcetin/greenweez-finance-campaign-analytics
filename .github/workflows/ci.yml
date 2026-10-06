@@ -46,6 +46,12 @@ jobs:
           dbt seed --target gsheet
           dbt build --target gsheet --vars '{source_system: fvt_gsheet}' --selector fvt_gsheet --indirect-selection cautious --exclude resource_type:seed
 
+      - name: Smoke-test the dashboard in both source modes
+        run: |
+          pip install -r demo/requirements.txt
+          python demo/smoke_test.py target/ci.duckdb sources
+          python demo/smoke_test.py target/gsheet.duckdb no-sources
+
       - name: Generate docs
         run: dbt docs generate
 
