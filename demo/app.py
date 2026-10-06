@@ -47,6 +47,8 @@ spend = query(
     from analytics.int_campaigns group by 1, 2 order by 1, 2
     """
 )
+marketing = query("select * from analytics_marketing.marketing_performance_month order by datemonth")
+by_source = query("select * from analytics_marketing.marketing_source_month order by datemonth, paid_source")
 daily["date"] = pd.to_datetime(daily["date"])
 
 st.title("Greenweez: finance and campaign profitability")
@@ -158,6 +160,60 @@ spend_chart = (
     .properties(height=260)
 )
 st.altair_chart(spend_chart, use_container_width=True)
+
+st.subheader("Marketing efficiency")
+st.caption(
+    "ROAS is blended (all sources together): revenue is not attributed to a source or campaign, "
+    "so CPC and CTR are the only per-source metrics."
+)
+marketing["datemonth"] = pd.to_datetime(marketing["datemonth"])
+by_source["datemonth"] = pd.to_datetime(by_source["datemonth"])
+
+
+def month_bars(df: pd.DataFrame, y: str, title: str, color: str, fmt: str) -> alt.Chart:
+    return (
+        alt.Chart(df, title=title)
+        .mark_bar(color=color, cornerRadiusTopLeft=4, cornerRadiusTopRight=4, size=36)
+        .encode(
+            x=alt.X("yearmonth(datemonth):O", title=None, axis=alt.Axis(labelAngle=0)),
+            y=alt.Y(f"{y}:Q", title=None),
+            tooltip=[alt.Tooltip("yearmonth(datemonth):O", title="Month"), alt.Tooltip(f"{y}:Q", format=fmt, title=title)],
+        )
+        .properties(height=220)
+    )
+
+
+def source_lines(y: str, title: str, fmt: str) -> alt.Chart:
+    return (
+        alt.Chart(by_source, title=title)
+        .mark_line(point=alt.OverlayMarkDef(size=60, stroke="white", strokeWidth=2), strokeWidth=2)
+        .encode(
+            x=alt.X("yearmonth(datemonth):O", title=None, axis=alt.Axis(labelAngle=0)),
+            y=alt.Y(f"{y}:Q", title=None, scale=alt.Scale(zero=False)),
+            color=alt.Color(
+                "paid_source:N",
+                scale=alt.Scale(domain=list(SOURCE_COLORS), range=list(SOURCE_COLORS.values())),
+                legend=alt.Legend(title=None, orient="top"),
+            ),
+            tooltip=[
+                alt.Tooltip("yearmonth(datemonth):O", title="Month"),
+                alt.Tooltip("paid_source:N", title="Source"),
+                alt.Tooltip(f"{y}:Q", format=fmt, title=title),
+            ],
+        )
+        .properties(height=300)
+    )
+
+
+roas_col, margin_col = st.columns(2)
+roas_col.altair_chart(month_bars(marketing, "roas", "Blended ROAS (revenue per 1 of ad spend)", BLUE, ",.2f"), use_container_width=True)
+margin_col.altair_chart(month_bars(marketing, "margin_roas", "Operational margin per 1 of ad spend", AQUA, ",.2f"), use_container_width=True)
+cpc_col, ctr_col = st.columns(2)
+cpc_col.altair_chart(source_lines("cpc", "Cost per click by source", ",.3f"), use_container_width=True)
+ctr_col.altair_chart(source_lines("ctr", "Click-through rate by source", ".2%"), use_container_width=True)
+
+with st.expander("Table view: marketing_source_month"):
+    st.dataframe(by_source, use_container_width=True, hide_index=True)
 
 with st.expander("Table view: finance_campaigns_month"):
     st.dataframe(monthly, use_container_width=True, hide_index=True)
