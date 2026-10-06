@@ -1,7 +1,7 @@
 export DBT_PROFILES_DIR ?= .github/dbt-profiles
 DBT = dbt
 
-.PHONY: setup seed build test lint docs demo clean build-gsheet
+.PHONY: setup seed build test lint docs demo clean build-gsheet demo-gsheet load-gsheet-real build-gsheet-real demo-gsheet-real
 
 setup:            ## install Python deps and dbt packages
 	pip install -r requirements.txt
@@ -36,3 +36,18 @@ clean:
 build-gsheet:     ## same pipeline fed by the order-level Google Sheets export (synthetic seeds on DuckDB)
 	$(DBT) seed --target gsheet
 	$(DBT) build --target gsheet --vars '{source_system: fvt_gsheet}' --selector fvt_gsheet --indirect-selection cautious --exclude resource_type:seed
+
+demo-gsheet: build-gsheet   ## dashboard on the Google Sheets export shape (synthetic seeds)
+	pip install -r demo/requirements.txt
+	DEMO_DB=target/gsheet.duckdb DEMO_DATA_LABEL="Synthetic copy of the Google Sheets export" streamlit run demo/app.py
+
+load-gsheet-real:  ## copy the real fvt_gsheet tables from BigQuery (read-only) into target/gsheet_real.duckdb
+	pip install -r scripts/requirements-bq.txt
+	python scripts/load_gsheet_from_bigquery.py
+
+build-gsheet-real: load-gsheet-real  ## build the marts on the real Google Sheets data
+	$(DBT) build --target gsheet_real --vars '{source_system: fvt_gsheet}' --selector fvt_gsheet --indirect-selection cautious --exclude resource_type:seed
+
+demo-gsheet-real: build-gsheet-real  ## dashboard on the real Google Sheets data (needs GOOGLE_APPLICATION_CREDENTIALS)
+	pip install -r demo/requirements.txt
+	DEMO_DB=target/gsheet_real.duckdb DEMO_DATA_LABEL="Google Sheets export (real data, 2021-10-01 to 2021-10-15)" streamlit run demo/app.py

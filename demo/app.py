@@ -2,7 +2,8 @@
 
 Run `make demo` (builds the dbt project into target/demo.duckdb first), or:
     streamlit run demo/app.py
-Set DEMO_DB to read a different DuckDB file.
+Set DEMO_DB to read a different DuckDB file (e.g. target/gsheet.duckdb for the fvt_gsheet mode) and
+DEMO_DATA_LABEL to describe the data in the caption.
 """
 import os
 from pathlib import Path
@@ -14,6 +15,8 @@ import streamlit as st
 
 DB_PATH = Path(os.environ.get("DEMO_DB", Path(__file__).resolve().parent.parent / "target" / "demo.duckdb"))
 
+DATA_LABEL = os.environ.get("DEMO_DATA_LABEL", "Synthetic demo data")
+
 # Categorical slots 1-4 of the reference palette, assigned in fixed order.
 BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"
 SOURCE_COLORS = {"adwords": BLUE, "bing": ORANGE, "criteo": AQUA, "facebook": YELLOW}
@@ -22,8 +25,8 @@ st.set_page_config(page_title="Greenweez finance & campaigns", layout="wide")
 
 
 @st.cache_data(show_spinner=False)
-def load(sql: str, db_mtime: float) -> pd.DataFrame:
-    # db_mtime is part of the cache key so a fresh `dbt build` invalidates the cache.
+def load(sql: str, db_path: str, db_mtime: float) -> pd.DataFrame:
+    # db_path and db_mtime are part of the cache key: a fresh `dbt build` or another database invalidates it.
     con = duckdb.connect(str(DB_PATH), read_only=True)
     try:
         return con.sql(sql).df()
@@ -32,7 +35,7 @@ def load(sql: str, db_mtime: float) -> pd.DataFrame:
 
 
 def query(sql: str) -> pd.DataFrame:
-    return load(sql, DB_PATH.stat().st_mtime)
+    return load(sql, str(DB_PATH), DB_PATH.stat().st_mtime)
 
 
 if not DB_PATH.exists():
@@ -41,21 +44,34 @@ if not DB_PATH.exists():
 
 daily = query("select * from analytics_finance.finance_campaigns_day order by date")
 monthly = query("select * from analytics_finance.finance_campaigns_month order by datemonth")
-spend = query(
-    """
-    select date_trunc('month', date_date)::date as datemonth, paid_source, sum(ads_cost) as ads_cost
-    from analytics.int_campaigns group by 1, 2 order by 1, 2
-    """
-)
 marketing = query("select * from analytics_marketing.marketing_performance_month order by datemonth")
-by_source = query("select * from analytics_marketing.marketing_source_month order by datemonth, paid_source")
+
+# The fvt_gsheet source mode has no per-source ads (no source, clicks or impressions), so the
+# per-source models do not exist there. Detect that from the database instead of a flag.
+existing = query("select table_schema, table_name from information_schema.tables")
+existing_tables = set(zip(existing["table_schema"], existing["table_name"]))
+has_sources = {("analytics", "int_campaigns"), ("analytics_marketing", "marketing_source_month")} <= existing_tables
+if has_sources:
+    spend = query(
+        """
+        select date_trunc('month', date_date)::date as datemonth, paid_source, sum(ads_cost) as ads_cost
+        from analytics.int_campaigns group by 1, 2 order by 1, 2
+        """
+    )
+    by_source = query("select * from analytics_marketing.marketing_source_month order by datemonth, paid_source")
 daily["date"] = pd.to_datetime(daily["date"])
 
 st.title("Greenweez: finance and campaign profitability")
 st.caption(
-    "Synthetic demo data served by the dbt marts `finance_campaigns_day` and `finance_campaigns_month`. "
+    f"{DATA_LABEL} served by the dbt marts `finance_campaigns_day` and `finance_campaigns_month`. "
     "Reporting logic, not marketing attribution."
 )
+if not has_sources:
+    st.info(
+        "Order-level Google Sheets export (`source_system: fvt_gsheet`): it has no per-source ads, clicks or "
+        "impressions, so those sections are hidden. The sheet's `refund` column is not used because its "
+        "meaning is unverified."
+    )
 
 lo, hi = daily["date"].min().date(), daily["date"].max().date()
 start, end = st.date_input("Date range", value=(lo, hi), min_value=lo, max_value=hi)
@@ -88,11 +104,11 @@ def line(df: pd.DataFrame, y: str, title: str, color: str, zero_rule: bool = Fal
 
 # One measure per chart: revenue and ad spend have different scales, so no dual axis.
 left, right = st.columns(2)
-left.altair_chart(line(view, "revenue", "Daily revenue", BLUE), use_container_width=True)
-right.altair_chart(line(view, "ads_cost", "Daily ad spend", ORANGE), use_container_width=True)
+left.altair_chart(line(view, "revenue", "Daily revenue", BLUE), width="stretch")
+right.altair_chart(line(view, "ads_cost", "Daily ad spend", ORANGE), width="stretch")
 st.altair_chart(
     line(view, "ads_margin", "Daily margin after ads (negative on days with spend but no orders)", AQUA, True),
-    use_container_width=True,
+    width="stretch",
 )
 
 st.subheader("Monthly margin waterfall")
@@ -136,38 +152,43 @@ labels = (
     .mark_text(dy=-6, fontSize=11)
     .encode(x=alt.X("step:N", sort=order), y="top:Q", text=alt.Text("delta:Q", format=",.0f"))
 )
-st.altair_chart((bars + labels).properties(height=320), use_container_width=True)
+st.altair_chart((bars + labels).properties(height=320), width="stretch")
 
-st.subheader("Ad spend by source")
-spend["datemonth"] = pd.to_datetime(spend["datemonth"])
-spend_chart = (
-    alt.Chart(spend)
-    .mark_bar(stroke="white", strokeWidth=2)
-    .encode(
-        x=alt.X("yearmonth(datemonth):O", title=None, axis=alt.Axis(labelAngle=0)),
-        y=alt.Y("ads_cost:Q", title=None),
-        color=alt.Color(
-            "paid_source:N",
-            scale=alt.Scale(domain=list(SOURCE_COLORS), range=list(SOURCE_COLORS.values())),
-            legend=alt.Legend(title=None, orient="top"),
-        ),
-        tooltip=[
-            alt.Tooltip("yearmonth(datemonth):O", title="Month"),
-            alt.Tooltip("paid_source:N", title="Source"),
-            alt.Tooltip("ads_cost:Q", format=",.0f", title="Spend"),
-        ],
+if has_sources:
+    st.subheader("Ad spend by source")
+    spend["datemonth"] = pd.to_datetime(spend["datemonth"])
+    spend_chart = (
+        alt.Chart(spend)
+        .mark_bar(stroke="white", strokeWidth=2)
+        .encode(
+            x=alt.X("yearmonth(datemonth):O", title=None, axis=alt.Axis(labelAngle=0)),
+            y=alt.Y("ads_cost:Q", title=None),
+            color=alt.Color(
+                "paid_source:N",
+                scale=alt.Scale(domain=list(SOURCE_COLORS), range=list(SOURCE_COLORS.values())),
+                legend=alt.Legend(title=None, orient="top"),
+            ),
+            tooltip=[
+                alt.Tooltip("yearmonth(datemonth):O", title="Month"),
+                alt.Tooltip("paid_source:N", title="Source"),
+                alt.Tooltip("ads_cost:Q", format=",.0f", title="Spend"),
+            ],
+        )
+        .properties(height=260)
     )
-    .properties(height=260)
-)
-st.altair_chart(spend_chart, use_container_width=True)
+    st.altair_chart(spend_chart, width="stretch")
 
 st.subheader("Marketing efficiency")
-st.caption(
-    "ROAS is blended (all sources together): revenue is not attributed to a source or campaign, "
-    "so CPC and CTR are the only per-source metrics."
-)
+if has_sources:
+    st.caption(
+        "ROAS is blended (all sources together): revenue is not attributed to a source or campaign, "
+        "so CPC and CTR are the only per-source metrics."
+    )
+else:
+    st.caption("ROAS is blended: revenue is not attributed to a source or campaign.")
 marketing["datemonth"] = pd.to_datetime(marketing["datemonth"])
-by_source["datemonth"] = pd.to_datetime(by_source["datemonth"])
+if has_sources:
+    by_source["datemonth"] = pd.to_datetime(by_source["datemonth"])
 
 
 def month_bars(df: pd.DataFrame, y: str, title: str, color: str, fmt: str) -> alt.Chart:
@@ -206,14 +227,17 @@ def source_lines(y: str, title: str, fmt: str) -> alt.Chart:
 
 
 roas_col, margin_col = st.columns(2)
-roas_col.altair_chart(month_bars(marketing, "roas", "Blended ROAS (revenue per 1 of ad spend)", BLUE, ",.2f"), use_container_width=True)
-margin_col.altair_chart(month_bars(marketing, "margin_roas", "Operational margin per 1 of ad spend", AQUA, ",.2f"), use_container_width=True)
-cpc_col, ctr_col = st.columns(2)
-cpc_col.altair_chart(source_lines("cpc", "Cost per click by source", ",.3f"), use_container_width=True)
-ctr_col.altair_chart(source_lines("ctr", "Click-through rate by source", ".2%"), use_container_width=True)
+roas_col.altair_chart(month_bars(marketing, "roas", "Blended ROAS (revenue per 1 of ad spend)", BLUE, ",.2f"), width="stretch")
+margin_col.altair_chart(month_bars(marketing, "margin_roas", "Operational margin per 1 of ad spend", AQUA, ",.2f"), width="stretch")
+if has_sources:
+    cpc_col, ctr_col = st.columns(2)
+    cpc_col.altair_chart(source_lines("cpc", "Cost per click by source", ",.3f"), width="stretch")
+    ctr_col.altair_chart(source_lines("ctr", "Click-through rate by source", ".2%"), width="stretch")
 
-with st.expander("Table view: marketing_source_month"):
-    st.dataframe(by_source, use_container_width=True, hide_index=True)
+    with st.expander("Table view: marketing_source_month"):
+        st.dataframe(by_source, width="stretch", hide_index=True)
+else:
+    st.caption("CPC and CTR need per-source clicks and impressions, which this data does not have.")
 
 with st.expander("Table view: finance_campaigns_month"):
-    st.dataframe(monthly, use_container_width=True, hide_index=True)
+    st.dataframe(monthly, width="stretch", hide_index=True)

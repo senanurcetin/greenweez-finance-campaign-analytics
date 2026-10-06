@@ -6,7 +6,8 @@ exposures:
     type: dashboard
     maturity: low
     description: >
-      Streamlit demo (demo/app.py) reading the finance marts from the DuckDB demo build.
+      Streamlit demo (demo/app.py) reading the finance and marketing marts from a DuckDB build, in the
+      default source mode or the fvt_gsheet mode (where the per-source sections are hidden).
     owner:
       name: Senanur Cetin
     depends_on:

@@ -48,6 +48,8 @@ make demo      # Streamlit dashboard on top of the marts
 make docs      # dbt docs (lineage incl. the dashboard exposure)
 make lint      # sqlfluff + yamllint
 make build-gsheet  # same pipeline on the Google Sheets export shape (synthetic seeds)
+make demo-gsheet   # dashboard on that synthetic copy
+make demo-gsheet-real  # dashboard on the real Google Sheets data (see below)
 ```
 
 `scripts/generate_seed_data.py` regenerates the synthetic raw tables in `seeds/` (deterministic). It deliberately includes edge cases: orders without a shipping row, a sold product missing from the product table, days with ad spend but no orders. The two `WARN` results in `dbt build` come from these cases on purpose.
@@ -77,6 +79,18 @@ Notes on the Google Sheets export (2021-10-01 to 2021-10-15, 13,362 orders, one 
 - It is a static snapshot, so no freshness check is configured.
 - Result on the real data (checked against independent BigQuery sums): revenue 967,261.07, operational margin 210,572.49, ad cost 65,845.09, margin after ads 144,727.40, blended ROAS 14.69, margin ROAS 3.20.
 
+## Dashboard
+
+`demo/app.py` (Streamlit) reads a built DuckDB file and adapts to what the data contains: with per-source ads it shows spend by source, CPC and CTR; on the Google Sheets export it hides those sections and says why. Blended ROAS and margin ROAS show in both.
+
+| Command | Data |
+|---|---|
+| `make demo` | synthetic default-mode data (`gwz_raw` shape) |
+| `make demo-gsheet` | synthetic copy of the Google Sheets export |
+| `make demo-gsheet-real` | the real Google Sheets data: `scripts/load_gsheet_from_bigquery.py` copies the four `fvt_gsheet` tables from BigQuery into `target/gsheet_real.duckdb` (read-only `SELECT`s, needs `GOOGLE_APPLICATION_CREDENTIALS`), then dbt builds the marts on it |
+
+The real data is business data: it stays under `target/` (gitignored), never commit it, and keep the service-account key file out of the repository. `demo/smoke_test.py` runs the app headlessly in both modes and is part of CI.
+
 ## Running against BigQuery
 
 1. Copy `.github/dbt-profiles/profiles.bigquery.example.yml` to `~/.dbt/profiles.yml` and set your project/dataset.
@@ -101,7 +115,9 @@ models/exposures.yml                         dashboard exposure
 macros/                                      stg_ads_source, month_start
 seeds/                                       synthetic raw_gz_* CSVs (DuckDB targets only)
 tests/                                       singular reconciliation tests
-demo/app.py                                  Streamlit dashboard (reads target/demo.duckdb)
+demo/app.py                                  Streamlit dashboard (reads a built DuckDB file)
+demo/smoke_test.py                           headless dashboard check, both source modes
+scripts/load_gsheet_from_bigquery.py         read-only copy of fvt_gsheet into DuckDB
 scripts/generate_seed_data.py                seed generator
 ```
 
@@ -109,7 +125,7 @@ scripts/generate_seed_data.py                seed generator
 
 - The demo data is synthetic; its numbers say nothing about the real Greenweez business.
 - Campaign performance is reporting logic, not production marketing attribution.
-- The dashboard is a demo, not a BI product.
+- The dashboard is a demo, not a BI product; on the Google Sheets export it covers one month and no per-source ads.
 - BigQuery execution is not part of CI, and the real `raw_gz_*` source tables are not loaded in the warehouse yet.
 
 ## License
