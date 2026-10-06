@@ -51,6 +51,7 @@ marketing = query("select * from analytics_marketing.marketing_performance_month
 existing = query("select table_schema, table_name from information_schema.tables")
 existing_tables = set(zip(existing["table_schema"], existing["table_name"]))
 has_sources = {("analytics", "int_campaigns"), ("analytics_marketing", "marketing_source_month")} <= existing_tables
+has_refunds = ("analytics_finance", "finance_refunds_month") in existing_tables
 if has_sources:
     spend = query(
         """
@@ -69,8 +70,8 @@ st.caption(
 if not has_sources:
     st.info(
         "Order-level Google Sheets export (`source_system: fvt_gsheet`): it has no per-source ads, clicks or "
-        "impressions, so those sections are hidden. The sheet's `refund` column is not used because its "
-        "meaning is unverified."
+        "impressions, so those sections are hidden. The sheet's `refund` column is shown separately below and "
+        "is not subtracted from revenue or margins because its meaning is unverified."
     )
 
 lo, hi = daily["date"].min().date(), daily["date"].max().date()
@@ -238,6 +239,30 @@ if has_sources:
         st.dataframe(by_source, width="stretch", hide_index=True)
 else:
     st.caption("CPC and CTR need per-source clicks and impressions, which this data does not have.")
+
+if has_refunds:
+    refunds = query("select * from analytics_finance.finance_refunds_month order by datemonth")
+    st.subheader("Refunds (unverified)")
+    orders_total = int(refunds["orders"].sum())
+    with_refund = int(refunds["orders_with_refund"].sum())
+    above_revenue = int(refunds["orders_refund_above_revenue"].sum())
+    refund_total = refunds["refund_amount"].sum()
+    verified = bool(refunds["refund_unit_verified"].all())
+    refund_cols = st.columns(4 if verified else 3)
+    refund_cols[0].metric("Refund total" + (" (scaled)" if verified else " (as stored)"), f"{refund_total:,.0f}")
+    refund_cols[1].metric("Orders with a refund", f"{with_refund / orders_total:.0%}")
+    refund_cols[2].metric("Orders where refund > revenue", f"{above_revenue / orders_total:.0%}")
+    if verified:
+        refund_cols[3].metric("Net revenue after refunds", f"{refunds['net_revenue_after_refunds'].sum():,.0f}")
+    else:
+        st.warning(
+            "The sheet's refund column is reported on its own and is not subtracted from revenue or margins: "
+            "it is on every order, between 50 and 500 whatever the order size, and as stored it is "
+            f"{refund_total / refunds['revenue'].sum():.1f} times the revenue. Once its unit is confirmed, set "
+            "`refund_amount_scale` and `refund_unit_verified` (see README, Refunds) to get net revenue."
+        )
+    with st.expander("Table view: finance_refunds_month"):
+        st.dataframe(refunds, width="stretch", hide_index=True)
 
 with st.expander("Table view: finance_campaigns_month"):
     st.dataframe(monthly, width="stretch", hide_index=True)

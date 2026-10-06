@@ -20,6 +20,11 @@ vars:
   # Raw system feeding the intermediate layer: `gwz_raw` (default, raw_gz_* tables)
   # or `fvt_gsheet` (Fivetran Google Sheets export, order-level). See README.
   source_system: gwz_raw
+  # fvt_gsheet only: how to read the sheet's `refund` column (see README, "Refunds").
+  # refund_amount_scale multiplies the stored value (e.g. 0.01 if it is in cents);
+  # refund_unit_verified true makes finance_refunds_month compute net_revenue_after_refunds.
+  refund_amount_scale: 1.0
+  refund_unit_verified: false
 
 models:
   dbt_workintech:
