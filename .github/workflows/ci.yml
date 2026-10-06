@@ -41,6 +41,11 @@ jobs:
       - name: Build and test models
         run: dbt build --exclude resource_type:seed
 
+      - name: Build and test the fvt_gsheet mode
+        run: |
+          dbt seed --target gsheet
+          dbt build --target gsheet --vars '{source_system: fvt_gsheet}' --selector fvt_gsheet --indirect-selection cautious --exclude resource_type:seed
+
       - name: Generate docs
         run: dbt docs generate
 

@@ -4,6 +4,9 @@ unit_tests:
   - name: operational_margin_survives_missing_ship_record
     description: "An order without a shipping row keeps a non-NULL operational margin."
     model: int_orders_operational
+    config:
+      # its inputs are the gwz_raw staging models, which are not used in fvt_gsheet mode
+      enabled: "{{ var('source_system', 'gwz_raw') == 'gwz_raw' }}"
     given:
       - input: ref('int_orders_margin')
         rows:
