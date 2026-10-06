@@ -10,6 +10,11 @@ models and tests are expected to handle:
   * days with ad spend but no orders          -> must stay visible in the daily mart
   * several ad platforms/campaigns on one day -> campaign union + daily rollup
 
+It also writes seeds/gwz_finance_*.csv, a small synthetic copy of the order-level Google Sheets
+export (BigQuery dataset `fvt_gsheet`) used by the `source_system: fvt_gsheet` mode: one orders,
+shipping and refund row per order plus one campaign row per day, with a zero-revenue order and an
+order without a shipping row as edge cases.
+
 Usage: python scripts/generate_seed_data.py
 """
 import csv
@@ -111,5 +116,41 @@ def main():
         )
 
 
+def generate_gsheet():
+    rng = random.Random(2021)
+    start, days, per_day = date(2021, 10, 1), 15, 60
+    orders, shipping, refund, campaign = [], [], [], []
+    order_id, line = 1002561, 0
+    for offset in range(days):
+        day = start + timedelta(days=offset)
+        stamp = f"{day.isoformat()} 00:00:00UTC"
+        for _ in range(per_day):
+            order_id += 1
+            line += 1
+            turnover = 0.0 if line % 97 == 0 else round(rng.uniform(5, 150), 2)  # edge: free order
+            purchase = round(turnover * rng.uniform(0.5, 0.9), 2) if turnover else round(rng.uniform(1, 30), 2)
+            fee = rng.choice([0.0, 0.93, 3.43, 7.35])
+            orders.append((line, fee, stamp, order_id, purchase, turnover))
+            if line % 211 != 0:  # edge: order without a shipping row
+                shipping.append((line, order_id, round(rng.uniform(2, 10), 2), day.isoformat(), rng.randint(2, 8)))
+            refund.append((line, stamp, order_id, rng.randint(50, 500)))
+        hour = rng.randint(6, 22)
+        campaign.append((offset + 1, f"{day.isoformat()} {hour:02d}:00:00UTC", round(rng.uniform(3800, 5000), 2)))
+
+    def write_gs(name, header, rows):
+        path = SEED_DIR / f"gwz_finance_{name}.csv"
+        with path.open("w", newline="") as f:
+            w = csv.writer(f, lineterminator="\n")
+            w.writerow(header)
+            w.writerows(rows)
+        print(f"{path.name}: {len(rows)} rows")
+
+    write_gs("orders_orders", ["_line", "ship_fee", "datetime", "orders_id", "purchase_cost", "turnover"], orders)
+    write_gs("shipping_shipping", ["_line", "orders_id", "log_cost", "date_date", "ship_cost"], shipping)
+    write_gs("refund_sheet_1", ["_line", "datetime", "orders_id", "refund"], refund)
+    write_gs("campaign", ["_row", "datetime", "cost"], campaign)
+
+
 if __name__ == "__main__":
     main()
+    generate_gsheet()

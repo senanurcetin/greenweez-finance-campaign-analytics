@@ -16,10 +16,17 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+vars:
+  # Raw system feeding the intermediate layer: `gwz_raw` (default, raw_gz_* tables)
+  # or `fvt_gsheet` (Fivetran Google Sheets export, order-level). See README.
+  source_system: gwz_raw
+
 models:
   dbt_workintech:
     staging:
       +materialized: view
+      gsheet:
+        +tags: [fvt_gsheet]
     intermediate:
       +materialized: view
     mart:

@@ -11,3 +11,8 @@ default:
       path: target/demo.duckdb
       schema: analytics
       threads: 1
+    gsheet:
+      type: duckdb
+      path: target/gsheet.duckdb
+      schema: analytics
+      threads: 1

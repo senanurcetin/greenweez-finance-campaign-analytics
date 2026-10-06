@@ -26,7 +26,9 @@ models:
         description: "Margin calculated as revenue minus purchase cost."
 
   - name: int_orders_margin
-    description: "Order-level margin aggregated from product-level margins."
+    description: >
+      Order-level margin aggregated from product-level margins. With `source_system: fvt_gsheet`
+      it is read directly from the order-level Google Sheets export (quantity is then NULL).
     columns:
       - name: orders_id
         description: "Order identifier."
@@ -113,7 +115,9 @@ models:
         description: "Number of ad clicks."
 
   - name: int_campaigns_day
-    description: "Daily aggregated paid marketing metrics across all campaign sources."
+    description: >
+      Daily aggregated paid marketing metrics across all campaign sources. With `source_system: fvt_gsheet`
+      only the daily total ad cost exists, impressions and clicks are NULL.
     columns:
       - name: date_date
         description: "Aggregation date."

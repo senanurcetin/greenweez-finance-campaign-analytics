@@ -47,11 +47,35 @@ make build     # dbt seed + dbt build (models, tests, unit tests) -> target/demo
 make demo      # Streamlit dashboard on top of the marts
 make docs      # dbt docs (lineage incl. the dashboard exposure)
 make lint      # sqlfluff + yamllint
+make build-gsheet  # same pipeline on the Google Sheets export shape (synthetic seeds)
 ```
 
 `scripts/generate_seed_data.py` regenerates the synthetic raw tables in `seeds/` (deterministic). It deliberately includes edge cases: orders without a shipping row, a sold product missing from the product table, days with ad spend but no orders. The two `WARN` results in `dbt build` come from these cases on purpose.
 
 Note: dbt sources do not create DAG edges to seeds, so load them first (`dbt seed`) and then `dbt build --exclude resource_type:seed`; `make build` does this.
+
+## Source systems: `gwz_raw` (default) and `fvt_gsheet`
+
+The intermediate layer can be fed by two raw systems, selected with the `source_system` variable:
+
+| | `gwz_raw` (default) | `fvt_gsheet` |
+|---|---|---|
+| Raw data | `gwz_raw_data.raw_gz_*` (order lines, products, 4 ad platforms) | `fvt_gsheet.gwz_finance_*` (Google Sheets export via Fivetran, order level) |
+| Staging | `stg_raw__*` | `stg_gsheet__orders`, `__shipping`, `__refund`, `__campaign` |
+| Available | everything | revenue, purchase cost, shipping fee/costs, daily ad cost, blended ROAS |
+| Not available | | quantity (NULL), per-source ads, CPC/CTR (NULL), `marketing_source_month` |
+
+```bash
+make build-gsheet   # synthetic seeds on DuckDB
+dbt build --vars '{source_system: fvt_gsheet}' --selector fvt_gsheet --indirect-selection cautious --exclude resource_type:seed   # real BigQuery data
+```
+
+Notes on the Google Sheets export (2021-10-01 to 2021-10-15, 13,362 orders, one row per order in orders, shipping and refund):
+
+- `refund` is staged (`stg_gsheet__refund`) but **not used in any margin**: it is a whole number between 50 and 500 on every order, uncorrelated with the order (correlation with revenue about 0.01) and higher than the order revenue on 12,426 of 13,362 orders. A `warn` test (`assert_gsheet_refund_not_above_revenue`) keeps the anomaly visible until its meaning is confirmed.
+- 13 orders have zero revenue, 43 have a negative margin and 561 have a zero purchase cost; they are kept, not filtered.
+- It is a static snapshot, so no freshness check is configured.
+- Result on the real data (checked against independent BigQuery sums): revenue 967,261.07, operational margin 210,572.49, ad cost 65,845.09, margin after ads 144,727.40, blended ROAS 14.69, margin ROAS 3.20.
 
 ## Running against BigQuery
 
@@ -65,12 +89,13 @@ The BigQuery target parses without credentials, but CI does not execute it (that
 
 ## Quality checks (CI)
 
-`.github/workflows/ci.yml` runs on every PR: `yamllint`, `sqlfluff lint`, `dbt deps`, `dbt seed`, `dbt build` on DuckDB (about 70 data tests, singular tests in `tests/`, unit tests for the margin and weighted-basket logic), and uploads the dbt docs as an artifact.
+`.github/workflows/ci.yml` runs on every PR: `yamllint`, `sqlfluff lint`, `dbt deps`, `dbt seed`, `dbt build` on DuckDB (default mode, then the `fvt_gsheet` mode) (about 70 data tests, singular tests in `tests/`, unit tests for the margin and weighted-basket logic), and uploads the dbt docs as an artifact.
 
 ## Layout
 
 ```
 models/{staging,intermediate,mart/finance}   dbt models + schema.yml docs/tests
+models/staging/gsheet/                       staging for the fvt_gsheet export
 models/mart/marketing/                       ROAS / CPC / CTR marts
 models/exposures.yml                         dashboard exposure
 macros/                                      stg_ads_source, month_start

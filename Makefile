@@ -1,7 +1,7 @@
-PROFILES ?= .github/dbt-profiles
-DBT = dbt --profiles-dir $(PROFILES)
+export DBT_PROFILES_DIR ?= .github/dbt-profiles
+DBT = dbt
 
-.PHONY: setup seed build test lint docs demo clean
+.PHONY: setup seed build test lint docs demo clean build-gsheet
 
 setup:            ## install Python deps and dbt packages
 	pip install -r requirements.txt
@@ -32,3 +32,7 @@ demo: build       ## build, then open the Streamlit dashboard
 
 clean:
 	rm -rf target dbt_packages logs
+
+build-gsheet:     ## same pipeline fed by the order-level Google Sheets export (synthetic seeds on DuckDB)
+	$(DBT) seed --target gsheet
+	$(DBT) build --target gsheet --vars '{source_system: fvt_gsheet}' --selector fvt_gsheet --indirect-selection cautious --exclude resource_type:seed
