@@ -83,13 +83,13 @@ Notes on the Google Sheets export (2021-10-01 to 2021-10-15, 13,362 orders, one 
 2. `dbt deps && dbt build`. Seeds are disabled on the BigQuery target; sources resolve to `workintech-working.gwz_raw_data.raw_gz_*`.
 3. With dbt's default schema naming, staging/intermediate land in `<dataset>` and the marts in `<dataset>_finance` (e.g. `dbt_scetin` and `dbt_scetin_finance`).
 
-The BigQuery target parses without credentials, but CI does not execute it (that needs a service account). The SQL was also built and tested on BigQuery (EU) with the synthetic seeds loaded into a scratch dataset.
+The BigQuery target parses without credentials, but CI does not execute it (that needs a service account). Both source modes were also checked on BigQuery (EU): the default mode with the synthetic seeds, the `fvt_gsheet` mode with the real sheet data. The compiled model chain ran as a read-only query and returned the same numbers as DuckDB.
 
 > The `gwz_raw_data.raw_gz_*` source tables must exist before a real BigQuery run; at the time of writing the dataset is empty.
 
 ## Quality checks (CI)
 
-`.github/workflows/ci.yml` runs on every PR: `yamllint`, `sqlfluff lint`, `dbt deps`, `dbt seed`, `dbt build` on DuckDB (default mode, then the `fvt_gsheet` mode) (about 70 data tests, singular tests in `tests/`, unit tests for the margin and weighted-basket logic), and uploads the dbt docs as an artifact.
+`.github/workflows/ci.yml` runs on every PR: `yamllint`, `sqlfluff lint`, `dbt deps`, `dbt seed`, `dbt build` on DuckDB (default mode, then the `fvt_gsheet` mode), which runs the schema tests, the singular reconciliation tests in `tests/` and the unit tests, and uploads the dbt docs as an artifact.
 
 ## Layout
 
